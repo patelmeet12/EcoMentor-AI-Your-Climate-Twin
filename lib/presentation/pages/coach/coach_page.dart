@@ -5,6 +5,7 @@ import 'package:ecomentor_ai/presentation/widgets/glass_card.dart';
 import 'package:ecomentor_ai/presentation/providers/coach_provider.dart';
 import 'components/coach_bubble.dart';
 import 'components/quick_replies_list.dart';
+import 'components/coach_input_row.dart';
 
 /// Renders the conversational Sustainability Coach chat history, quick reply suggestions,
 /// and custom user question input textfields.
@@ -126,7 +127,10 @@ class _CoachPageState extends ConsumerState<CoachPage> {
                       onSelect: _scrollToBottom,
                     ),
                     const SizedBox(height: 12),
-                    _buildInputRow(),
+                    CoachInputRow(
+                      controller: _textController,
+                      onSend: _sendMessage,
+                    ),
                   ],
                 ),
               ),
@@ -134,44 +138,6 @@ class _CoachPageState extends ConsumerState<CoachPage> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildInputRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: Semantics(
-            textField: true,
-            label: 'Enter a custom question to the coach',
-            child: TextField(
-              controller: _textController,
-              decoration: const InputDecoration(
-                hintText: 'Type your climate questions here...',
-                contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              ),
-              onSubmitted: (_) => _sendMessage(),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Semantics(
-          button: true,
-          label: 'Send message',
-          child: Material(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(12),
-            child: InkWell(
-              onTap: _sendMessage,
-              borderRadius: BorderRadius.circular(12),
-              child: const Padding(
-                padding: EdgeInsets.all(14.0),
-                child: Icon(Icons.send, color: Colors.white, size: 20),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

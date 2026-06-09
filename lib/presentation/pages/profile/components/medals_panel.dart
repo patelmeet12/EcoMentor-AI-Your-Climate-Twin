@@ -36,7 +36,7 @@ class MedalsPanel extends StatelessWidget {
               maxCrossAxisExtent: 220,
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              childAspectRatio: 1.25,
+              childAspectRatio: 1.1,
             ),
             itemCount: badges.length,
             itemBuilder: (context, index) {

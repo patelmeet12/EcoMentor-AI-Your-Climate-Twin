@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 /// Core application constants.
 class AppConstants {
   // SharedPreferences Keys
@@ -46,4 +48,50 @@ class AppConstants {
   // Core Score Thresholds
   static const double thresholdNetZero = 1500.0;
   static const double thresholdMaxFootprint = 15000.0;
+
+  // Static badge definitions
+  static const List<Map<String, dynamic>> badges = [
+    {
+      'id': 'Green Starter',
+      'title': 'Green Starter',
+      'desc': 'Completed onboarding lifestyle assessment.',
+      'icon': Icons.eco,
+      'color': Colors.teal,
+    },
+    {
+      'id': 'Carbon Reducer',
+      'title': 'Carbon Reducer',
+      'desc': 'Completed your first carbon-reduction recommendation.',
+      'icon': Icons.bolt,
+      'color': Colors.amber,
+    },
+    {
+      'id': 'Eco Explorer',
+      'title': 'Eco Explorer',
+      'desc': 'Replaced habits to achieve a Sustainability Score >= 70.',
+      'icon': Icons.explore,
+      'color': Colors.cyan,
+    },
+    {
+      'id': 'Sustainability Hero',
+      'title': 'Sustainability Hero',
+      'desc': 'Optimized habits to reach a score >= 85.',
+      'icon': Icons.shield_rounded,
+      'color': Colors.purpleAccent,
+    },
+    {
+      'id': 'Planet Guardian',
+      'title': 'Planet Guardian',
+      'desc': 'Successfully checked off 3 or more carbon tasks.',
+      'icon': Icons.spa,
+      'color': Colors.blueAccent,
+    },
+    {
+      'id': 'Streak Master',
+      'title': 'Streak Master',
+      'desc': 'Maintained a consistent daily green streak for 3 days.',
+      'icon': Icons.local_fire_department,
+      'color': Colors.orange,
+    },
+  ];
 }

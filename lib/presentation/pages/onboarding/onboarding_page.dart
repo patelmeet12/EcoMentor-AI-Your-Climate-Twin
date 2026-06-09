@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:ecomentor_ai/core/theme/app_theme.dart';
 import 'package:ecomentor_ai/presentation/providers/twin_provider.dart';
 import 'package:ecomentor_ai/domain/entities/assessment.dart';
+import 'components/onboarding_loading_screen.dart';
 import 'components/welcome_step_card.dart';
 import 'components/transportation_step_card.dart';
 import 'components/energy_step_card.dart';
@@ -103,7 +104,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (_isCalculating) {
-      return _buildLoadingScreen(isDark);
+      return const OnboardingLoadingScreen();
     }
 
     return Scaffold(
@@ -191,50 +192,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
               ),
               _buildControlRow(isDark),
               const SizedBox(height: 32),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoadingScreen(bool isDark) {
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark ? [AppColors.darkBg, const Color(0xFF0F172A)] : [AppColors.lightBg, const Color(0xFFEFF6FF)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(
-                width: 80,
-                height: 80,
-                child: CircularProgressIndicator(
-                  strokeWidth: 6,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                ),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                'Analyzing Carbon DNA...',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : AppColors.lightTextPrimary,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Formulating your unique digital Climate Twin',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                    ),
-              ),
             ],
           ),
         ),
