@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/utils/calculations.dart';
+import '../../domain/usecases/simulate_carbon_usecase.dart';
 import 'twin_provider.dart';
 
+/// Represents the active state inside the Future Impact Simulator.
 class SimulationState {
   final Map<String, bool> toggledActions; // id -> isToggled
   final double simulatedEmissions;
@@ -38,13 +39,16 @@ class SimulationState {
   }
 }
 
+/// Provider for future simulations.
 final simulationProvider = StateNotifierProvider<SimulationNotifier, SimulationState>((ref) {
-  final twinState = ref.watch(twinProvider);
+  final TwinState twinState = ref.watch(twinProvider);
   return SimulationNotifier(twinState);
 });
 
+/// Controller that monitors simulator state updates.
 class SimulationNotifier extends StateNotifier<SimulationState> {
   final TwinState _twinState;
+  final SimulateCarbonUseCase _simulateCarbon = SimulateCarbonUseCase();
 
   SimulationNotifier(this._twinState)
       : super(SimulationState(
@@ -59,7 +63,7 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
   }
 
   void _initializeToggles() {
-    final initialToggles = <String, bool>{};
+    final Map<String, bool> initialToggles = <String, bool>{};
     for (final rec in _twinState.recommendations) {
       if (!rec.isCompleted) {
         initialToggles[rec.id] = false;
@@ -68,8 +72,9 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
     state = state.copyWith(toggledActions: initialToggles);
   }
 
+  /// Toggles an action offset inside the simulation playground.
   void toggleAction(String actionId) {
-    final updatedToggles = Map<String, bool>.from(state.toggledActions);
+    final Map<String, bool> updatedToggles = Map<String, bool>.from(state.toggledActions);
     if (updatedToggles.containsKey(actionId)) {
       updatedToggles[actionId] = !updatedToggles[actionId]!;
     } else {
@@ -86,15 +91,17 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
       }
     }
 
-    final simulatedEmissions = _twinState.twin.annualEmissions - reducedKg;
-    final simulatedScore = CarbonCalculations.calculateSustainabilityScore(simulatedEmissions);
-    final simulatedGrade = CarbonCalculations.calculateGrade(simulatedScore);
+    // Delegate calculation of simulated values to the usecase
+    final Map<String, dynamic> simulationResult = _simulateCarbon(
+      baseEmissions: _twinState.twin.annualEmissions,
+      reducedEmissionsOffset: reducedKg,
+    );
 
     state = state.copyWith(
       toggledActions: updatedToggles,
-      simulatedEmissions: simulatedEmissions < 0 ? 0.0 : simulatedEmissions,
-      simulatedScore: simulatedScore,
-      simulatedGrade: simulatedGrade,
+      simulatedEmissions: simulationResult['emissions'] as double,
+      simulatedScore: simulationResult['score'] as int,
+      simulatedGrade: simulationResult['grade'] as String,
       totalReducedKg: reducedKg,
       totalSavingsInr: savings,
     );

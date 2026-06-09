@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../widgets/glass_card.dart';
-import '../../widgets/twin_avatar.dart';
 import '../../providers/twin_provider.dart';
+import 'components/identity_card.dart';
+import 'components/medals_panel.dart';
 
+/// The main page that displays the user's Climate Twin credentials and unlockable badge achievements.
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
@@ -107,166 +108,48 @@ class ProfilePage extends ConsumerWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(flex: 3, child: _buildTwinIdentityCard(twin, progress, level, levelProgress, nextLevelXp, isDark)),
+                  Expanded(
+                    flex: 3,
+                    child: IdentityCard(
+                      twin: twin,
+                      progress: progress,
+                      level: level,
+                      levelProgress: levelProgress,
+                      nextLevelXp: nextLevelXp,
+                      isDark: isDark,
+                    ),
+                  ),
                   const SizedBox(width: 24),
-                  Expanded(flex: 4, child: _buildMedalsPanel(progress, badges, isDark)),
+                  Expanded(
+                    flex: 4,
+                    child: MedalsPanel(
+                      progress: progress,
+                      badges: badges,
+                      isDark: isDark,
+                    ),
+                  ),
                 ],
               )
             else ...[
-              _buildTwinIdentityCard(twin, progress, level, levelProgress, nextLevelXp, isDark),
+              IdentityCard(
+                twin: twin,
+                progress: progress,
+                level: level,
+                levelProgress: levelProgress,
+                nextLevelXp: nextLevelXp,
+                isDark: isDark,
+              ),
               const SizedBox(height: 24),
-              _buildMedalsPanel(progress, badges, isDark),
+              MedalsPanel(
+                progress: progress,
+                badges: badges,
+                isDark: isDark,
+              ),
             ],
           ],
         ),
       ),
     );
   }
-
-  Widget _buildTwinIdentityCard(
-    dynamic twin,
-    dynamic progress,
-    int level,
-    double levelProgress,
-    int nextLevelXp,
-    bool isDark,
-  ) {
-    return GlassCard(
-      enableHover: false,
-      child: Column(
-        children: [
-          TwinAvatar(score: twin.score, personality: twin.personality, size: 140),
-          const SizedBox(height: 16),
-          Text(twin.personality, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(
-            'Level $level Climatic Twin',
-            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13),
-          ),
-          const SizedBox(height: 24),
-
-          // XP progress bar
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Level $level', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-              Text('${progress.xpPoints} / $nextLevelXp XP', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: levelProgress,
-              minHeight: 10,
-              backgroundColor: isDark ? AppColors.darkBg : Colors.grey.withOpacity(0.2),
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Side stats
-          Row(
-            children: [
-              _buildCompactStatCol('Streak count', '${progress.streakDays} days 🔥'),
-              const VerticalDivider(),
-              _buildCompactStatCol('Reduced CO₂', '${progress.totalCarbonReduced.toStringAsFixed(0)} kg 🍀'),
-              const VerticalDivider(),
-              _buildCompactStatCol('Score', '${twin.score}/100 🎯'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCompactStatCol(String label, String value) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-          const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMedalsPanel(dynamic progress, List<Map<String, dynamic>> badges, bool isDark) {
-    return GlassCard(
-      enableHover: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Climatic Achievements & Medals', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          const Text('Unlock badges by finishing carbon recommendations and keeping streaks.', style: TextStyle(fontSize: 12, color: Colors.grey)),
-          const SizedBox(height: 20),
-
-          // Medals Grid
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 220,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.25,
-            ),
-            itemCount: badges.length,
-            itemBuilder: (context, index) {
-              final badge = badges[index];
-              final isUnlocked = progress.achievements.contains(badge['id']);
-              final iconColor = badge['color'] as Color;
-
-              return Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkBg.withOpacity(0.5) : Colors.grey.withOpacity(0.04),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isUnlocked
-                        ? iconColor.withOpacity(0.4)
-                        : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                    width: isUnlocked ? 1.5 : 1.0,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Semantics(
-                      label: '${badge['title']} badge is ${isUnlocked ? 'unlocked' : 'locked'}',
-                      child: Icon(
-                        isUnlocked ? (badge['icon'] as IconData) : Icons.lock_outline,
-                        size: 32,
-                        color: isUnlocked ? iconColor : Colors.grey.withOpacity(0.5),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      badge['title'] as String,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.bold,
-                        color: isUnlocked ? null : Colors.grey,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      badge['desc'] as String,
-                      style: const TextStyle(fontSize: 9.5, color: Colors.grey),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
 }
+

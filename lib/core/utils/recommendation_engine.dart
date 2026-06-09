@@ -1,54 +1,69 @@
 import '../../domain/entities/assessment.dart';
 import '../../domain/entities/recommendation.dart';
+import '../constants/app_constants.dart';
 
+/// Local rule-based suggestion engine. Analyzes lifestyle details and generates
+/// prioritized actionable recommendations with annual cash and carbon offsets.
 class RecommendationEngine {
+  /// Evaluates assessment answers and returns a list of tailored recommendations.
   static List<Recommendation> generateRecommendations(Assessment habits, double totalCarbon) {
-    final List<Recommendation> list = [];
+    final List<Recommendation> recommendationsList = [];
 
     // Calculate category carbon scores first to show relative importance
-    final transportCarbon = habits.weeklyDistance * 52.0 * 
-        (habits.vehicleType.toLowerCase().contains('gasoline') ? 0.18 :
-         habits.vehicleType.toLowerCase().contains('diesel') ? 0.17 :
-         habits.vehicleType.toLowerCase().contains('hybrid') ? 0.09 :
-         habits.vehicleType.toLowerCase().contains('electric') ? 0.05 :
-         habits.vehicleType.toLowerCase().contains('motorcycle') ? 0.08 : 0.0) +
-        (habits.publicTransportUsage * 25.0 * 52.0 * 0.03) +
-        (habits.flightsPerYear * 500.0);
+    final double transportCarbon = habits.weeklyDistance * 52.0 *
+            (habits.vehicleType.toLowerCase().contains('gasoline')
+                ? AppConstants.factorGasolineCar
+                : habits.vehicleType.toLowerCase().contains('diesel')
+                    ? AppConstants.factorDieselCar
+                    : habits.vehicleType.toLowerCase().contains('hybrid')
+                        ? AppConstants.factorHybridCar
+                        : habits.vehicleType.toLowerCase().contains('electric')
+                            ? AppConstants.factorElectricCar
+                            : habits.vehicleType.toLowerCase().contains('motorcycle')
+                                ? AppConstants.factorMotorcycle
+                                : 0.0) +
+        (habits.publicTransportUsage * AppConstants.avgPublicSpeedKmh * 52.0 * AppConstants.factorPublicTransport) +
+        (habits.flightsPerYear * AppConstants.factorFlights);
 
-    final energyCarbon = (habits.monthlyElectricity * 12.0 * 0.85 * (1.0 - habits.renewableEnergyUsage)) +
-        (habits.acUsage * 365.0 * 0.6);
+    final double energyCarbon = (habits.monthlyElectricity *
+            12.0 *
+            AppConstants.factorGridElectricity *
+            (1.0 - habits.renewableEnergyUsage)) +
+        (habits.acUsage * 365.0 * AppConstants.factorAcHour);
 
     // Helper to calculate percentages
     final double transportPct = totalCarbon > 0 ? (transportCarbon / totalCarbon * 100) : 0;
     final double energyPct = totalCarbon > 0 ? (energyCarbon / totalCarbon * 100) : 0;
 
     // 1. TRANSPORTATION RECOMMENDATIONS
-    if ((habits.vehicleType.toLowerCase().contains('gasoline') || 
-         habits.vehicleType.toLowerCase().contains('diesel')) && 
-        habits.weeklyDistance >= 80) {
-      list.add(Recommendation(
+    final bool isCommuterFossilFuel = habits.vehicleType.toLowerCase().contains('gasoline') ||
+        habits.vehicleType.toLowerCase().contains('diesel');
+        
+    if (isCommuterFossilFuel && habits.weeklyDistance >= 80) {
+      // Propose carpooling/transit 2 days per week (approx 35% reduction of private driving)
+      final double annualCommuteSavings = habits.weeklyDistance * 52.0 * 0.35;
+      recommendationsList.add(Recommendation(
         id: 'trans_carpool',
         title: 'Switch to Carpool or Transit 2 days/week',
         description: 'Reduce weekly driving of your fossil fuel car by sharing rides or utilizing public transport.',
         category: 'transportation',
-        impactKg: habits.weeklyDistance * 52.0 * 0.18 * 0.35, // 35% reduction
-        savingsInr: habits.weeklyDistance * 52.0 * 0.35 * 6.5, // 35% savings at ~₹6.5 fuel cost/km
+        impactKg: annualCommuteSavings * AppConstants.factorGasolineCar, // default gasoline factor for generic savings
+        savingsInr: annualCommuteSavings * 6.5, // at ₹6.5 running cost/km
         difficulty: 'Low',
         priority: transportPct >= 40 ? 'High' : 'Medium',
         reasoning: 'Transportation contributes ${transportPct.toStringAsFixed(0)}% of your footprint. Replacing two weekly drives with transit reduces urban congestion and reduces fossil fuel depletion.',
       ));
     }
 
-    if ((habits.vehicleType.toLowerCase().contains('gasoline') || 
-         habits.vehicleType.toLowerCase().contains('diesel')) && 
-        habits.weeklyDistance >= 150) {
-      list.add(Recommendation(
+    if (isCommuterFossilFuel && habits.weeklyDistance >= 150) {
+      // Propose EV upgrade
+      recommendationsList.add(Recommendation(
         id: 'trans_ev',
         title: 'Transition to an Electric Vehicle (EV)',
         description: 'Upgrade your primary high-emission car to a fully battery-electric vehicle for your commutes.',
         category: 'transportation',
-        impactKg: habits.weeklyDistance * 52.0 * 0.13, // Difference of gasoline (0.18) vs electric (0.05)
-        savingsInr: habits.weeklyDistance * 52.0 * 3.5, // Saving of ₹3.5/km in running costs
+        impactKg: habits.weeklyDistance * 52.0 * (AppConstants.factorGasolineCar - AppConstants.factorElectricCar),
+        savingsInr: habits.weeklyDistance * 52.0 * 3.5, // ₹3.5/km electric running cost delta savings
         difficulty: 'High',
         priority: transportPct >= 50 ? 'High' : 'Medium',
         reasoning: 'Replacing your ICE car with an EV reduces operating costs and shifts your energy usage to more sustainable electric options, saving significant emissions long-term.',
@@ -56,13 +71,14 @@ class RecommendationEngine {
     }
 
     if (habits.flightsPerYear >= 2) {
-      list.add(Recommendation(
+      // Flight reduction
+      recommendationsList.add(Recommendation(
         id: 'trans_flights',
         title: 'Offset flight carbon or travel via trains',
         description: 'Consider substituting domestic short-haul flights with high-speed rail, or purchase verified carbon offsets.',
         category: 'transportation',
-        impactKg: habits.flightsPerYear * 250.0, // reduce flights by 50%
-        savingsInr: habits.flightsPerYear * 6000.0, // average flight cost difference
+        impactKg: habits.flightsPerYear * (AppConstants.factorFlights * 0.5), // assume cutting flights by 50%
+        savingsInr: habits.flightsPerYear * 6000.0,
         difficulty: 'Medium',
         priority: 'High',
         reasoning: 'A single flight contributes 500 kg of CO2 directly into the upper atmosphere. Reducing flights or offsetting is essential to balance high travel emissions.',
@@ -71,12 +87,12 @@ class RecommendationEngine {
 
     // 2. ENERGY RECOMMENDATIONS
     if (habits.acUsage >= 3) {
-      list.add(Recommendation(
+      recommendationsList.add(Recommendation(
         id: 'energy_ac_temp',
         title: 'Set your AC temperature to 24°C or above',
         description: 'Raise your AC setpoint from a cold temperature (e.g., 18°C) to 24°C. Use ceiling fans to circulate air.',
         category: 'energy',
-        impactKg: habits.acUsage * 365.0 * 0.6 * 0.20, // 20% savings on AC load
+        impactKg: habits.acUsage * 365.0 * AppConstants.factorAcHour * 0.20, // 20% AC saving
         savingsInr: habits.acUsage * 365.0 * 1.2 * 0.20 * 8.0, // AC power 1.2kW * 20% * ₹8/kWh
         difficulty: 'Low',
         priority: energyPct >= 30 ? 'High' : 'Medium',
@@ -85,12 +101,12 @@ class RecommendationEngine {
     }
 
     if (habits.renewableEnergyUsage < 0.2 && habits.monthlyElectricity >= 100) {
-      list.add(Recommendation(
+      recommendationsList.add(Recommendation(
         id: 'energy_solar',
         title: 'Install Rooftop Solar Panels',
         description: 'Cover a portion of your monthly energy usage with solar panels or opt for a green utility grid tariff.',
         category: 'energy',
-        impactKg: habits.monthlyElectricity * 12.0 * 0.85 * 0.6, // 60% grid offset
+        impactKg: habits.monthlyElectricity * 12.0 * AppConstants.factorGridElectricity * 0.6, // 60% offset
         savingsInr: habits.monthlyElectricity * 12.0 * 0.6 * 7.5, // 60% power savings at ₹7.5/kWh
         difficulty: 'High',
         priority: energyPct >= 40 ? 'High' : 'Medium',
@@ -99,8 +115,9 @@ class RecommendationEngine {
     }
 
     // 3. FOOD RECOMMENDATIONS
-    if (habits.dietType.toLowerCase() == 'high meat' || habits.dietType.toLowerCase() == 'high meat consumption') {
-      list.add(Recommendation(
+    final String diet = habits.dietType.toLowerCase();
+    if (diet == 'high meat' || diet == 'high meat consumption') {
+      recommendationsList.add(Recommendation(
         id: 'food_meatless',
         title: 'Introduce Meatless Mondays',
         description: 'Substitute animal proteins with beans, lentils, tofu, and other plant-based options one day per week.',
@@ -113,13 +130,13 @@ class RecommendationEngine {
       ));
     }
 
-    if (habits.dietType.toLowerCase() == 'mixed' || habits.dietType.toLowerCase().contains('mixed')) {
-      list.add(Recommendation(
+    if (diet == 'mixed' || diet.contains('mixed')) {
+      recommendationsList.add(Recommendation(
         id: 'food_vegetarian',
         title: 'Adopt a Vegetarian Diet',
         description: 'Remove meat from your daily diet while retaining dairy products and organic eggs.',
         category: 'food',
-        impactKg: 800.0, // 2000kg mixed -> 1200kg vegetarian
+        impactKg: AppConstants.factorDietMixed - AppConstants.factorDietVegetarian,
         savingsInr: 10000.0,
         difficulty: 'Medium',
         priority: 'Medium',
@@ -128,9 +145,9 @@ class RecommendationEngine {
     }
 
     // 4. SHOPPING RECOMMENDATIONS
-    if (habits.electronicsPurchase.toLowerCase() == 'frequently' || 
-        habits.electronicsPurchase.toLowerCase() == 'occasionally') {
-      list.add(Recommendation(
+    final String elect = habits.electronicsPurchase.toLowerCase();
+    if (elect == 'frequently' || elect == 'occasionally') {
+      recommendationsList.add(Recommendation(
         id: 'shop_refurbished',
         title: 'Purchase Refurbished Electronics',
         description: 'Opt for certified pre-owned or refurbished items for your next smartphone, laptop, or home appliance.',
@@ -144,7 +161,7 @@ class RecommendationEngine {
     }
 
     if (habits.shoppingFrequency.toLowerCase() == 'high') {
-      list.add(Recommendation(
+      recommendationsList.add(Recommendation(
         id: 'shop_mindful',
         title: 'Practice a One-In, One-Out Shopping Rule',
         description: 'Prevent impulsive purchases. Buy new items only to replace worn-out essentials.',
@@ -159,27 +176,27 @@ class RecommendationEngine {
 
     // 5. WASTE RECOMMENDATIONS
     if (!habits.composting) {
-      list.add(Recommendation(
+      recommendationsList.add(Recommendation(
         id: 'waste_compost',
         title: 'Start Organic Composting',
         description: 'Set up a small home composter for organic vegetable peels, coffee grounds, and food leftovers.',
         category: 'waste',
-        impactKg: 100.0,
-        savingsInr: 1500.0, // saves buying soil/fertilizers
+        impactKg: AppConstants.factorCompostOffset.abs(),
+        savingsInr: 1500.0,
         difficulty: 'Medium',
         priority: 'Low',
         reasoning: 'Organic kitchen waste trapped in landfills generates methane gas due to anaerobic conditions. Composting turns it into nutrient-rich soil aerobically.',
       ));
     }
 
-    if (habits.recyclingHabits.toLowerCase() == 'never' || 
-        habits.recyclingHabits.toLowerCase() == 'occasionally') {
-      list.add(Recommendation(
+    final String recycle = habits.recyclingHabits.toLowerCase();
+    if (recycle == 'never' || recycle == 'occasionally') {
+      recommendationsList.add(Recommendation(
         id: 'waste_recycle',
         title: 'Implement Dedicated Waste Segregation',
         description: 'Divide household waste into dry recyclables (paper, plastic, metal) and organic waste.',
         category: 'waste',
-        impactKg: 150.0,
+        impactKg: AppConstants.factorWasteRecycleReg.abs(),
         savingsInr: 1000.0,
         difficulty: 'Low',
         priority: 'High',
@@ -188,8 +205,8 @@ class RecommendationEngine {
     }
 
     // Default recommendation if list is too short
-    if (list.length < 3) {
-      list.add(Recommendation(
+    if (recommendationsList.length < 3) {
+      recommendationsList.add(Recommendation(
         id: 'default_energy_efficient_lights',
         title: 'Upgrade to Smart LED Lighting',
         description: 'Replace remaining halogen or CFL bulbs with energy star rated LED lights.',
@@ -202,6 +219,6 @@ class RecommendationEngine {
       ));
     }
 
-    return list;
+    return recommendationsList;
   }
 }

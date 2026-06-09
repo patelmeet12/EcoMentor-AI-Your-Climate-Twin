@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
 
 class TwinAvatar extends StatefulWidget {
   final int score;

@@ -93,6 +93,7 @@ lib/
 │   └── repositories/    # UserRepository implementation mapping data/domain
 ├── domain/
 │   ├── entities/        # Pure Dart entities (Assessment, Twin, UserProgress, Recommendation)
+│   ├── usecases/        # Pure business logic Use Cases (CalculateCarbonUseCase, CalculateScoreUseCase, GetRecommendationsUseCase, SimulateCarbonUseCase)
 │   └── repositories/    # Repository interfaces
 ├── presentation/
 │   ├── pages/

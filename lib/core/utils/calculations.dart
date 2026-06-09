@@ -1,7 +1,10 @@
 import 'dart:math';
+import '../constants/app_constants.dart';
 
+/// Provides static calculations for carbon footprints, sustainability grades,
+/// scores, and environmental personalities.
 class CarbonCalculations {
-  /// Calculates annual transportation carbon emissions in kg CO2
+  /// Calculates annual transportation carbon emissions in kg CO₂ based on vehicle commute and flights.
   static double calculateTransportationCarbon({
     required String vehicleType,
     required double weeklyDistance,
@@ -9,152 +12,154 @@ class CarbonCalculations {
     required int flightsPerYear,
   }) {
     double carEmissions = 0.0;
-    double annualCarDistance = weeklyDistance * 52.0;
+    final double annualCarDistance = weeklyDistance * 52.0;
 
     switch (vehicleType.toLowerCase()) {
       case 'gasoline':
       case 'gasoline car':
-        carEmissions = annualCarDistance * 0.18;
+        carEmissions = annualCarDistance * AppConstants.factorGasolineCar;
         break;
       case 'diesel':
       case 'diesel car':
-        carEmissions = annualCarDistance * 0.17;
+        carEmissions = annualCarDistance * AppConstants.factorDieselCar;
         break;
       case 'hybrid':
       case 'hybrid car':
-        carEmissions = annualCarDistance * 0.09;
+        carEmissions = annualCarDistance * AppConstants.factorHybridCar;
         break;
       case 'electric':
       case 'electric car':
-        carEmissions = annualCarDistance * 0.05;
+        carEmissions = annualCarDistance * AppConstants.factorElectricCar;
         break;
       case 'motorcycle':
-        carEmissions = annualCarDistance * 0.08;
+        carEmissions = annualCarDistance * AppConstants.factorMotorcycle;
         break;
       default:
-        carEmissions = 0.0; // "none" or invalid
+        carEmissions = 0.0;
     }
 
-    // Public transport: hours/week converted to km/week (assume 25 km/h avg speed)
-    double publicWeeklyKm = publicTransportHours * 25.0;
-    double publicEmissions = publicWeeklyKm * 52.0 * 0.03;
+    // Public transport: hours/week converted to km/week
+    final double publicWeeklyKm = publicTransportHours * AppConstants.avgPublicSpeedKmh;
+    final double publicEmissions = publicWeeklyKm * 52.0 * AppConstants.factorPublicTransport;
 
-    // Flights: average short/medium haul flights per year
-    double flightEmissions = flightsPerYear * 500.0;
+    // Flights: annual count scaled by flight carbon factor
+    final double flightEmissions = flightsPerYear * AppConstants.factorFlights;
 
     return carEmissions + publicEmissions + flightEmissions;
   }
 
-  /// Calculates annual home energy carbon emissions in kg CO2
+  /// Calculates annual home energy carbon emissions in kg CO₂ from electricity usage and AC hours.
   static double calculateEnergyCarbon({
     required double monthlyElectricityKwh,
     required double acHoursPerDay,
-    required double renewableEnergyPercentage, // 0.0 to 1.0
+    required double renewableEnergyPercentage,
   }) {
-    // Electricity: monthly kwh * 12 * factor (0.85 kg/kwh in India/mixed grid)
-    double electricityEmissions = monthlyElectricityKwh * 12.0 * 0.85 * (1.0 - renewableEnergyPercentage);
+    // Electricity emissions scaled by grid factor and offset by solar usage ratio
+    final double electricityEmissions = monthlyElectricityKwh *
+        12.0 *
+        AppConstants.factorGridElectricity *
+        (1.0 - renewableEnergyPercentage);
 
-    // AC: hours/day * 365 * factor (assume typical split AC uses ~1.2 kW, factor is ~0.85 kg/kWh, so ~1.0 kg CO2/hour)
-    // Let's use 0.6 kg CO2/hour as specified in implementation plan
-    double acEmissions = acHoursPerDay * 365.0 * 0.6;
+    // AC usage emissions per day over the year
+    final double acEmissions = acHoursPerDay * 365.0 * AppConstants.factorAcHour;
 
     return electricityEmissions + acEmissions;
   }
 
-  /// Calculates annual food carbon emissions in kg CO2
+  /// Calculates annual food carbon emissions in kg CO₂ based on diet type.
   static double calculateFoodCarbon(String dietType) {
     switch (dietType.toLowerCase()) {
       case 'vegan':
-        return 800.0;
+        return AppConstants.factorDietVegan;
       case 'vegetarian':
-        return 1200.0;
+        return AppConstants.factorDietVegetarian;
       case 'mixed':
       case 'mixed diet':
-        return 2000.0;
+        return AppConstants.factorDietMixed;
       case 'high meat':
       case 'high meat consumption':
-        return 3000.0;
+        return AppConstants.factorDietHighMeat;
       default:
-        return 2000.0;
+        return AppConstants.factorDietMixed;
     }
   }
 
-  /// Calculates annual shopping carbon emissions in kg CO2
+  /// Calculates annual shopping carbon emissions in kg CO₂ based on consumer habits.
   static double calculateShoppingCarbon({
-    required String frequency, // low, medium, high
-    required String electronicsFrequency, // rarely, occasionally, frequently
+    required String frequency,
+    required String electronicsFrequency,
   }) {
-    double base = 0.0;
+    double baseEmissions = 0.0;
     switch (frequency.toLowerCase()) {
       case 'low':
-        base = 200.0;
+        baseEmissions = AppConstants.factorShoppingLow;
         break;
       case 'medium':
-        base = 600.0;
+        baseEmissions = AppConstants.factorShoppingMedium;
         break;
       case 'high':
-        base = 1200.0;
+        baseEmissions = AppConstants.factorShoppingHigh;
         break;
       default:
-        base = 600.0;
+        baseEmissions = AppConstants.factorShoppingMedium;
     }
 
-    double electronics = 0.0;
+    double electronicsEmissions = 0.0;
     switch (electronicsFrequency.toLowerCase()) {
       case 'rarely':
-        electronics = 100.0;
+        electronicsEmissions = AppConstants.factorElectronicsRare;
         break;
       case 'occasionally':
-        electronics = 200.0;
+        electronicsEmissions = AppConstants.factorElectronicsOccasional;
         break;
       case 'frequently':
-        electronics = 600.0;
+        electronicsEmissions = AppConstants.factorElectronicsFrequent;
         break;
       default:
-        electronics = 200.0;
+        electronicsEmissions = AppConstants.factorElectronicsOccasional;
     }
 
-    return base + electronics;
+    return baseEmissions + electronicsEmissions;
   }
 
-  /// Calculates annual waste carbon emissions in kg CO2
+  /// Calculates annual waste carbon emissions in kg CO₂ based on recycling and composting.
   static double calculateWasteCarbon({
-    required String recyclingHabits, // regularly, occasionally, never
-    required String plasticConsumption, // low, medium, high
+    required String recyclingHabits,
+    required String plasticConsumption,
     required bool composting,
   }) {
-    double base = 500.0;
+    const double baseEmissions = AppConstants.factorWasteBase;
 
     double recyclingOffset = 0.0;
     if (recyclingHabits.toLowerCase() == 'regularly') {
-      recyclingOffset = -150.0;
+      recyclingOffset = AppConstants.factorWasteRecycleReg;
     } else if (recyclingHabits.toLowerCase() == 'occasionally') {
-      recyclingOffset = -50.0;
+      recyclingOffset = AppConstants.factorWasteRecycleOcc;
     }
 
     double plasticAdjustment = 0.0;
     if (plasticConsumption.toLowerCase() == 'high') {
-      plasticAdjustment = 100.0;
+      plasticAdjustment = AppConstants.factorPlasticHigh;
     } else if (plasticConsumption.toLowerCase() == 'low') {
-      plasticAdjustment = -50.0;
+      plasticAdjustment = AppConstants.factorPlasticLow;
     }
 
-    double compostOffset = composting ? -100.0 : 0.0;
+    final double compostOffset = composting ? AppConstants.factorCompostOffset : 0.0;
 
-    return base + recyclingOffset + plasticAdjustment + compostOffset;
+    return baseEmissions + recyclingOffset + plasticAdjustment + compostOffset;
   }
 
-  /// Calculates sustainability score (0-100) based on total carbon emissions in kg CO2/year.
-  /// 1500 kg is very sustainable (score 100). 15000 kg or above is highly unsustainable (score 0).
+  /// Evaluates the sustainability score (0-100) based on annual footprint thresholds.
   static int calculateSustainabilityScore(double totalCarbon) {
-    if (totalCarbon <= 1500) return 100;
-    if (totalCarbon >= 15000) return 0;
+    if (totalCarbon <= AppConstants.thresholdNetZero) return 100;
+    if (totalCarbon >= AppConstants.thresholdMaxFootprint) return 0;
 
-    double score = 100.0 - ((totalCarbon - 1500) / (15000 - 1500) * 100.0);
+    final double range = AppConstants.thresholdMaxFootprint - AppConstants.thresholdNetZero;
+    final double score = 100.0 - ((totalCarbon - AppConstants.thresholdNetZero) / range * 100.0);
     return max(0, min(100, score.round()));
   }
 
-  /// Calculates the sustainability grade from the score (A+ to F)
+  /// Determines the letter grade corresponding to the sustainability score.
   static String calculateGrade(int score) {
     if (score >= 95) return 'A+';
     if (score >= 85) return 'A';
@@ -164,7 +169,7 @@ class CarbonCalculations {
     return 'F';
   }
 
-  /// Determines the environmental personality of the Climate Twin
+  /// Categorizes the user's environmental personality based on score and relative category contributions.
   static String calculatePersonality({
     required int score,
     required double transportPct,
@@ -175,7 +180,7 @@ class CarbonCalculations {
   }) {
     if (score >= 85) return 'Eco Hero';
 
-    double maxPct = [transportPct, energyPct, foodPct, shoppingPct, wastePct].reduce(max);
+    final double maxPct = [transportPct, energyPct, foodPct, shoppingPct, wastePct].reduce(max);
 
     if (maxPct == transportPct) {
       return score >= 60 ? 'Conscious Traveler' : 'Carbon Commuter';

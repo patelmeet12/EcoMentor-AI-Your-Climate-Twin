@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../widgets/glass_card.dart';
-import '../../providers/coach_provider.dart';
+import 'package:ecomentor_ai/core/theme/app_theme.dart';
+import 'package:ecomentor_ai/presentation/widgets/glass_card.dart';
+import 'package:ecomentor_ai/presentation/providers/coach_provider.dart';
+import 'components/coach_bubble.dart';
+import 'components/quick_replies_list.dart';
 
+/// Renders the conversational Sustainability Coach chat history, quick reply suggestions,
+/// and custom user question input textfields.
 class CoachPage extends ConsumerStatefulWidget {
   const CoachPage({super.key});
 
@@ -16,7 +20,7 @@ class _CoachPageState extends ConsumerState<CoachPage> {
   final ScrollController _scrollController = ScrollController();
 
   void _sendMessage() {
-    final text = _textController.text.trim();
+    final String text = _textController.text.trim();
     if (text.isNotEmpty) {
       ref.read(coachProvider.notifier).sendMessage(text);
       _textController.clear();
@@ -45,10 +49,9 @@ class _CoachPageState extends ConsumerState<CoachPage> {
 
   @override
   Widget build(BuildContext context) {
-    final coachState = ref.watch(coachProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final CoachState coachState = ref.watch(coachProvider);
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Scroll to bottom when new messages arrive
     ref.listen<CoachState>(coachProvider, (prev, next) {
       if (prev?.messages.length != next.messages.length || next.isTyping) {
         _scrollToBottom();
@@ -62,7 +65,6 @@ class _CoachPageState extends ConsumerState<CoachPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title block
             Text(
               'Climate Twin Coach',
               style: TextStyle(
@@ -80,26 +82,22 @@ class _CoachPageState extends ConsumerState<CoachPage> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // Message Area
             Expanded(
               child: GlassCard(
                 enableHover: false,
                 child: Column(
                   children: [
-                    // Dialogue log
                     Expanded(
                       child: ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         itemCount: coachState.messages.length,
                         itemBuilder: (context, index) {
-                          final msg = coachState.messages[index];
-                          return _buildChatBubble(msg, isDark);
+                          final CoachMessage msg = coachState.messages[index];
+                          return CoachBubble(message: msg, isDark: isDark);
                         },
                       ),
                     ),
-
                     if (coachState.isTyping) ...[
                       Align(
                         alignment: Alignment.centerLeft,
@@ -120,14 +118,15 @@ class _CoachPageState extends ConsumerState<CoachPage> {
                         ),
                       ),
                     ],
-
                     const SizedBox(height: 12),
-                    // Quick Reply Chips
-                    _buildQuickReplies(coachState.quickReplies, isDark),
+                    QuickRepliesList(
+                      replies: coachState.quickReplies,
+                      ref: ref,
+                      isDark: isDark,
+                      onSelect: _scrollToBottom,
+                    ),
                     const SizedBox(height: 12),
-
-                    // Input Text Row
-                    _buildInputRow(isDark),
+                    _buildInputRow(),
                   ],
                 ),
               ),
@@ -138,76 +137,7 @@ class _CoachPageState extends ConsumerState<CoachPage> {
     );
   }
 
-  Widget _buildChatBubble(CoachMessage msg, bool isDark) {
-    final alignment = msg.isUser ? Alignment.centerRight : Alignment.centerLeft;
-    final bubbleColor = msg.isUser
-        ? AppColors.primary
-        : (isDark ? AppColors.darkBg : Colors.grey.withOpacity(0.1));
-    final textColor = msg.isUser ? Colors.white : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary);
-
-    return Align(
-      alignment: alignment,
-      child: Container(
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.65),
-        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        decoration: BoxDecoration(
-          color: bubbleColor,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: msg.isUser ? const Radius.circular(16) : Radius.zero,
-            bottomRight: msg.isUser ? Radius.zero : const Radius.circular(16),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Process markdown-like formatting simply
-            Text(
-              msg.text.replaceAll('**', ''), // simple strip for pure text formatting
-              style: TextStyle(
-                color: textColor,
-                fontSize: 13.5,
-                height: 1.45,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickReplies(List<String> replies, bool isDark) {
-    return SizedBox(
-      height: 36,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: replies.length,
-        itemBuilder: (context, index) {
-          final replyText = replies[index];
-          return Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: Semantics(
-              button: true,
-              label: 'Quick response: $replyText',
-              child: ActionChip(
-                backgroundColor: isDark ? AppColors.darkBg : Colors.white,
-                side: BorderSide(color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                label: Text(replyText, style: const TextStyle(fontSize: 12, color: AppColors.primary)),
-                onPressed: () {
-                  ref.read(coachProvider.notifier).sendMessage(replyText);
-                  _scrollToBottom();
-                },
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildInputRow(bool isDark) {
+  Widget _buildInputRow() {
     return Row(
       children: [
         Expanded(
